@@ -1,0 +1,66 @@
+import anthropic
+import csv
+import time
+import pandas as pd
+
+comments = pd.read_csv("Data/Sample150_EN.csv")["text"].tolist()
+
+# --- Prompt ---
+SYSTEM_PROMPT = """You are a content moderation classifier.
+Label the following YouTube comment with exactly one digit according to these instructions:
+
+3, VIOLENT, meaning it is directed at a target with violent content. it can also be 
+explicit physical violence or implicit reference of denial or glorification of historical violence.
+2, OFFENSIVE, targeted at individuals or groups including offensive generalization, contempt, dehumanization, indirect
+offensive remarks, but not violent.
+1, INAPPROPRIATE, if the comment has no target but contains terms that are obscene or vulgar, but not violent nor offensive.
+0, APPROPRIATE, if the comment is not directed at anyone and is not any of the above.
+
+Respond with ONLY a single digit: 0, 1, 2, or 3. Nothing else."""
+
+# --- SET TEMPERATURE HERE ---
+TEMPERATURE = 0.2  # change this value for each experiment run 
+# --- Client ---
+client = anthropic.Anthropic()
+
+# --- Output file ---
+OUTPUT_FILE = f"EN_prompt_{TEMPERATURE}.csv"
+
+# Write header
+with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
+    writer = csv.writer(f)
+    writer.writerow(["index", "comment", "label_run1", "label_run2"])
+
+# --- Label twice per comment ---
+for i, comment in enumerate(comments):
+    labels = []
+
+    for run in range(2):
+        try:
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=5,
+                temperature=TEMPERATURE,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": comment}]
+            )
+            label = response.content[0].text.strip()
+
+            if label not in ["0", "1", "2", "3"]:
+                print(f"[WARNING] Unexpected output for comment {i}, run {run+1}: '{label}'")
+
+        except Exception as e:
+            label = "ERROR"
+            print(f"[ERROR] Comment {i}, run {run+1} failed: {e}")
+
+        labels.append(label)
+        time.sleep(0.3)  # delay between runs to avoid rate limits
+
+    # Append both labels to CSV
+    with open(OUTPUT_FILE, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([i, comment, labels[0], labels[1]])
+
+    print(f"[{i+1}/{len(comments)}] Run1: {labels[0]} | Run2: {labels[1]} | {comment[:60]}")
+
+print(f"\nDone. Results saved to {OUTPUT_FILE}")

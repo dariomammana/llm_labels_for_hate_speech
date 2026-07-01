@@ -31,10 +31,15 @@ SOURCE_FILES = {
 
 
 def build_unique_csv(input_path: Path, output_path: Path, text_column: str, drop_columns: list[str]) -> pd.DataFrame:
-	dataframe = pd.read_csv(input_path, low_memory=False)
-	dataframe = dataframe.drop(columns=drop_columns, errors="ignore")
+	"""Build a text-only CSV containing all unique comments from one source file.
+
+	The uniqueness criterion is the text column, and the output intentionally
+	keeps only that text column.
+	"""
+	dataframe = pd.read_csv(input_path, usecols=[text_column], low_memory=False)
+	dataframe = dataframe.dropna(subset=[text_column]).copy()
 	dataframe = dataframe.drop_duplicates(subset=[text_column], keep="first")
-	dataframe = dataframe[[text_column]]
+	dataframe = dataframe[[text_column]].rename(columns={text_column: "text"})
 	dataframe.to_csv(output_path, index=False)
 	return dataframe
 
@@ -56,15 +61,17 @@ def build_sampled_csv(
 	text_column: str,
 	type_column: str,
 	total_rows: int = 150,
-	repeated_texts: int = 5,
-	minimum_per_type: int = 5,
+	minimum_per_type: int = 15,
+	random_seed: int = 42,
 ) -> pd.DataFrame:
-	"""Write a 150-row sample with controlled duplicates and integer types.
+	"""Write a 150-row sample of unique comments with two type labels per row.
+
+	Each row includes both available annotations (type_1 and type_2) for inter-annotator agreement.
 
 	Tuning knobs:
 	- total_rows: total rows in the output file.
-	- repeated_texts: number of comments that are intentionally repeated twice.
 	- minimum_per_type: minimum rows for each type category 0..3.
+	- random_seed: seed used to make the remaining random fill reproducible.
 	"""
 	dataframe = pd.read_csv(input_path, usecols=[text_column, type_column], low_memory=False)
 	if text_column not in dataframe.columns:
@@ -78,87 +85,50 @@ def build_sampled_csv(
 	working = working.dropna(subset=["_type_int"]).copy()
 	working["_type_int"] = working["_type_int"].astype(int)
 
-	duplicate_candidates = (
-		working.groupby(text_column)["_type_int"]
-		.nunique()
-		.sort_index()
-	)
-	repeated_text_values = []
-	for text_value in working.sort_values("_row_order")[text_column].drop_duplicates():
-		if duplicate_candidates.get(text_value, 0) > 1:
-			repeated_text_values.append(text_value)
-		if len(repeated_text_values) == repeated_texts:
-			break
+	# Group by text to get all annotations per text
+	grouped = working.groupby(text_column)["_type_int"].apply(list).reset_index()
+	grouped.columns = [text_column, "_types"]
+	
+	# Filter to texts that have at least 2 annotations
+	grouped = grouped[grouped["_types"].apply(len) >= 2].copy()
+	grouped["_type_int"] = grouped["_types"].apply(lambda x: x[0])  # Use first type for stratification
+	
+	selected_parts = []
+	selected_texts = set()
 
-	if len(repeated_text_values) < repeated_texts:
-		raise ValueError(
-			f"Only found {len(repeated_text_values)} comments with multiple types in {input_path.name}; "
-			f"need {repeated_texts}."
-		)
-
-	repeated_rows = []
-	for text_value in repeated_text_values:
-		text_rows = working[working[text_column] == text_value].sort_values("_row_order")
-		seen_types = set()
-		for _, row in text_rows.iterrows():
-			if row["_type_int"] in seen_types:
-				continue
-			repeated_rows.append(row)
-			seen_types.add(row["_type_int"])
-			if len(seen_types) == 2:
-				break
-		if len(seen_types) < 2:
-			raise ValueError(
-				f"Comment {text_value!r} does not have two distinct type values in {input_path.name}."
-			)
-
-	repeated_df = pd.DataFrame(repeated_rows)
-	selected_texts = set(repeated_text_values)
-	selected_unique_rows = []
-	selected_unique_count = total_rows - len(repeated_df)
-
-	repeated_type_counts = repeated_df["_type_int"].value_counts().to_dict()
-	base_unique = working.drop_duplicates(subset=[text_column], keep="first")
-	base_unique = base_unique[~base_unique[text_column].isin(selected_texts)].sort_values("_row_order")
-
-	# First satisfy the minimum type quota using the first available unique text for each type.
 	for type_value in range(4):
-		needed = max(0, minimum_per_type - repeated_type_counts.get(type_value, 0))
-		if needed == 0:
-			continue
-		matching_rows = base_unique[base_unique["_type_int"] == type_value]
-		for _, row in matching_rows.iterrows():
-			if row[text_column] in selected_texts:
-				continue
-			selected_unique_rows.append(row)
-			selected_texts.add(row[text_column])
-			needed -= 1
-			if needed == 0:
-				break
-		if needed > 0:
+		type_rows = grouped[grouped["_type_int"] == type_value]
+		if len(type_rows) < minimum_per_type:
 			raise ValueError(
-				f"Not enough rows of type {type_value} in {input_path.name} to reach {minimum_per_type}."
+				f"{input_path.name} has only {len(type_rows)} texts with at least 2 annotations for type {type_value}; "
+				f"need at least {minimum_per_type}."
 			)
+		sampled_type_rows = type_rows.sample(n=minimum_per_type, random_state=random_seed + type_value)
+		selected_parts.append(sampled_type_rows)
+		selected_texts.update(sampled_type_rows[text_column].tolist())
 
-	# Then fill the remaining slots in original order, keeping one row per text.
-	for _, row in base_unique.iterrows():
-		if len(selected_unique_rows) >= selected_unique_count:
-			break
-		if row[text_column] in selected_texts:
-			continue
-		selected_unique_rows.append(row)
-		selected_texts.add(row[text_column])
-
-	if len(selected_unique_rows) < selected_unique_count:
+	selected_df = pd.concat(selected_parts, ignore_index=True)
+	remaining_pool = grouped[~grouped[text_column].isin(selected_texts)]
+	remaining_needed = total_rows - len(selected_df)
+	if remaining_needed < 0:
 		raise ValueError(
-			f"Only built {len(selected_unique_rows)} unique rows for {input_path.name}; "
-			f"need {selected_unique_count}."
+			f"Minimum per type exceeds target size for {input_path.name}: "
+			f"{len(selected_df)} rows selected before random fill."
+		)
+	if len(remaining_pool) < remaining_needed:
+		raise ValueError(
+			f"{input_path.name} has only {len(grouped)} texts with 2+ annotations; "
+			f"need {total_rows}."
 		)
 
-	selected_unique_df = pd.DataFrame(selected_unique_rows)
-	final_df = pd.concat([repeated_df, selected_unique_df], ignore_index=True)
-	final_df = final_df.sort_values("_row_order").reset_index(drop=True)
-	final_df = final_df[[text_column, "_type_int"]].rename(columns={"_type_int": "Type"})
+	remaining_df = remaining_pool.sample(n=remaining_needed, random_state=random_seed)
+	final_df = pd.concat([selected_df, remaining_df], ignore_index=True)
+	final_df = final_df.sample(frac=1, random_state=random_seed).reset_index(drop=True)
+	
+	# Extract type_1 and type_2 from the _types list
+	final_df["type_1"] = final_df["_types"].apply(lambda x: x[0])
+	final_df["type_2"] = final_df["_types"].apply(lambda x: x[1] if len(x) > 1 else x[0])
+	final_df = final_df[[text_column, "type_1", "type_2"]].rename(columns={text_column: "text"})
 	final_df.to_csv(output_path, index=False)
 	return final_df
 
