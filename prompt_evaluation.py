@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
-language = "EN" 
-temperature = "persona_rotation"  # or "redefined_class1" or "0.2" or "1"
+language = "SI" 
+temperature = "biased_personas"  # or "redefined_class1" or "0.2" or "1"
 
 path_to_sampled_labels = f"Data/Sample150_{language}.csv"
 
