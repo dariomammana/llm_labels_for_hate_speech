@@ -3,7 +3,7 @@ import csv
 import time
 import pandas as pd
 
-comments = pd.read_csv("Data/Sample150_SI.csv")["text"].tolist()
+comments = pd.read_csv("../../Data/Sample150_SI.csv")["text"].tolist()
 
 # --- Personas (Modified Text) ---
 # Base definitions from Kralj Novak 2022
@@ -17,13 +17,14 @@ Lahko gre tudi za eksplicitno fizično nasilje ali implicitno nanašanje na zani
 Odgovori SAMO z eno cifro: 0, 1, 2 ali 3. Nič drugega."""
 
 # Persona 1: Simulates a highly tolerant internet user who ignores mild insults
-SYSTEM_PROMPT_1 = """Ste visoko tolerantni klasifikator vsebine, ki simulira priložnostnega spletnega uporabnika z "debelo kožo".
-Ravnajte previdno: ocene 1, 2 ali 3 dodelite le, če komentar jasno in nedvomno izpolnjuje merila. Če obstaja kakršna koli dvoumnost ali če se zdi, da gre za šalo, privzeto izberite nižjo oceno ali 0.""" + SCALE_DEFINITIONS
+SYSTEM_PROMPT_1 = """Ste običajen uporabnik družbenih omrežij, ki ocenjuje objave na Twitterju.
+Imate visoko toleranco do usmerjenih žaljivk, vendar vas hitro užali grob, vulgaren ali opolzek jezik, tudi če ni usmerjen proti komurkoli posebej.
+Objavi ni treba biti usmerjena proti komurkoli, da bi bila neprimerna — splošna vulgarnost ali opolzkost je dovolj, da jo razvrstite kot 1.""" + SCALE_DEFINITIONS
 
 # Persona 2: Simulates a strict, highly sensitive content moderator
-SYSTEM_PROMPT_2 = """Ste visoko občutljiv varnostni moderator, ki simulira strogo politiko platforme z ničelno toleranco.Pozorno iščite mikroagresije, skrita kodirana sporočila, prikrite pristranskosti in implicitno sovražnost. 
-Če je komentar na meji ali bi ga kdorkoli lahko razumel kot žaljivega/neprimernega, ravnajte previdno in dodelite višjo možno oceno.""" + SCALE_DEFINITIONS
-
+SYSTEM_PROMPT_2 = """Ste strog moderator vsebin, ki ocenjuje objave na Twitterju.
+Uporabljate ničelno toleranco do kakršnekoli oblike grobega, vulgarnega ali opolzkega jezika, ne glede na to, ali je usmerjen proti komurkoli posebej.
+Objavi ni treba biti usmerjena proti komurkoli, da bi bila neprimerna — že sama splošna vulgarnost ali opolzkost zadostuje, da jo razvrstite kot 1.""" + SCALE_DEFINITIONS
 # Map runs to specific prompts
 SYSTEM_PROMPTS = [SYSTEM_PROMPT_1, SYSTEM_PROMPT_2]
 
@@ -35,7 +36,7 @@ TEMPERATURE = 1.0
 client = anthropic.Anthropic()
 
 # --- Output file ---
-OUTPUT_FILE = f"SI_prompt_biased_personas.csv"
+OUTPUT_FILE = f"SI_prompt_redefined_distinction.csv"
 
 # Write header
 with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:

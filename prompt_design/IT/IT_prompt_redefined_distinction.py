@@ -3,26 +3,26 @@ import csv
 import time
 import pandas as pd
 
-comments = pd.read_csv("Data/Sample150_SI.csv")["text"].tolist()
+comments = pd.read_csv("../../Data/Sample150_IT.csv")["text"].tolist()
 
 # --- Personas (Modified Text) ---
 # Base definitions from Kralj Novak 2022
 SCALE_DEFINITIONS = """
-3, NASILNO (VIOLENT), kar pomeni, da je usmerjeno v tarčo z nasilno vsebino. 
-Lahko gre tudi za eksplicitno fizično nasilje ali implicitno nanašanje na zanikanje oziroma veličanje zgodovinskega nasilja.
-2, ŽALJIVO (OFFENSIVE), usmerjeno v posameznike ali skupine, vključno z žaljivim posploševanjem, preziranjem, razčlovečenjem, posrednimi žaljivimi opazkami, vendar ni nasilno.
-1, NEPRIMERNO (INAPPROPRIATE), če komentar nima tarče, vendar vsebuje izraze, ki so opsceni ali vulgarni, vendar niso nasilni ali žaljivi.
-0, PRIMERNO (APPROPRIATE), če komentar ni usmerjen v nikogar in ne ustreza ničemur od zgoraj navedenega.
+3, VIOLENTO, ovvero che è rivolto a un bersaglio con contenuti violenti. Può trattarsi anche di violenza fisica esplicita o di un riferimento implicito alla negazione o glorificazione della violenza storica. 
+2, OFFENSIVO, rivolto a individui o gruppi, comprese generalizzazioni offensive, disprezzo, disumanizzazione, osservazioni offensive indirette, ma non violente. 
+1, INAPPROPRIATO, se il commento non ha un bersaglio ma contiene termini osceni o volgari, ma non violenti né offensivi. 
+0, APPROPRIATO, se il commento non è rivolto a nessuno e non rientra in nessuno dei casi precedenti.
 
-Odgovori SAMO z eno cifro: 0, 1, 2 ali 3. Nič drugega."""
+Rispondi solamente con una cifra singola: 0, 1, 2 o 3. Nient'altro."""
 
 # Persona 1: Simulates a highly tolerant internet user who ignores mild insults
-SYSTEM_PROMPT_1 = """Ste visoko tolerantni klasifikator vsebine, ki simulira priložnostnega spletnega uporabnika z "debelo kožo".
-Ravnajte previdno: ocene 1, 2 ali 3 dodelite le, če komentar jasno in nedvomno izpolnjuje merila. Če obstaja kakršna koli dvoumnost ali če se zdi, da gre za šalo, privzeto izberite nižjo oceno ali 0.""" + SCALE_DEFINITIONS
-
+SYSTEM_PROMPT_1 = """Sei un utente casuale di social media che valuta i commenti di YouTube.
+Hai un'alta tolleranza per gli insulti mirati, ma ti offendi facilmente per illinguaggio crudo, volgare o osceno, anche quando non è diretto a nessuno in particolare.
+Un commento non deve per forza colpire qualcuno per essere inappropriato — la volgarità o l'oscenità generale è sufficiente per classificarlo come 1.""" + SCALE_DEFINITIONS
 # Persona 2: Simulates a strict, highly sensitive content moderator
-SYSTEM_PROMPT_2 = """Ste visoko občutljiv varnostni moderator, ki simulira strogo politiko platforme z ničelno toleranco.Pozorno iščite mikroagresije, skrita kodirana sporočila, prikrite pristranskosti in implicitno sovražnost. 
-Če je komentar na meji ali bi ga kdorkoli lahko razumel kot žaljivega/neprimernega, ravnajte previdno in dodelite višjo možno oceno.""" + SCALE_DEFINITIONS
+SYSTEM_PROMPT_2 = """Sei un moderatore di contenuti severo che valuta i commenti di YouTube.
+Applichi la tolleranza zero per qualsiasi forma di linguaggio crudo, volgare o osceno, indipendentemente dal fatto che sia diretto specificamente a qualcuno.
+Un commento non ha bisogno di colpire nessuno per essere inappropriato — la sola volgarità o oscenità generale è sufficiente per classificarlo come 1.""" + SCALE_DEFINITIONS
 
 # Map runs to specific prompts
 SYSTEM_PROMPTS = [SYSTEM_PROMPT_1, SYSTEM_PROMPT_2]
@@ -35,7 +35,7 @@ TEMPERATURE = 1.0
 client = anthropic.Anthropic()
 
 # --- Output file ---
-OUTPUT_FILE = f"SI_prompt_biased_personas.csv"
+OUTPUT_FILE = f"IT_prompt_redefined_distinction.csv"
 
 # Write header
 with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
