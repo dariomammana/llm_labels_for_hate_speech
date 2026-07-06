@@ -1,0 +1,74 @@
+[
+  {
+    "batch_id": "msgbatch_01EAgpuaJW3iNKnkv9GjE4UM",
+    "run_name": "run1",
+    "start_index": 0,
+    "size": 10000
+  },
+  {
+    "batch_id": "msgbatch_01YK7K9NYpHnvLhffxEPK6nB",
+    "run_name": "run1",
+    "start_index": 10000,
+    "size": 10000
+  },
+  {
+    "batch_id": "msgbatch_01AnpVFZbjYkGhGqRyMvgrd2",
+    "run_name": "run1",
+    "start_index": 20000,
+    "size": 10000
+  },
+  {
+    "batch_id": "msgbatch_01UFFtWpuwEQc9pgGC17PYYU",
+    "run_name": "run1",
+    "start_index": 30000,
+    "size": 10000
+  },
+  {
+    "batch_id": "msgbatch_013meXSJPcqyWM9X3sHimo2s",
+    "run_name": "run1",
+    "start_index": 40000,
+    "size": 10000
+  },
+  {
+    "batch_id": "msgbatch_01CKyVVi1W3FzYbTq5exveea",
+    "run_name": "run1",
+    "start_index": 50000,
+    "size": 9231
+  },
+  {
+    "batch_id": "msgbatch_01Qh5rpNAYFWkEEAenYSfWrS",
+    "run_name": "run2",
+    "start_index": 0,
+    "size": 10000
+  },
+  {
+    "batch_id": "msgbatch_01Q9zCXfu4wyfVnq8pmCmSFE",
+    "run_name": "run2",
+    "start_index": 10000,
+    "size": 10000
+  },
+  {
+    "batch_id": "msgbatch_01FRrkWWn7q9ovi5kLAzZFTZ",
+    "run_name": "run2",
+    "start_index": 20000,
+    "size": 10000
+  },
+  {
+    "batch_id": "msgbatch_015HDKYYjwReHbnvRXcaFWw3",
+    "run_name": "run2",
+    "start_index": 30000,
+    "size": 10000
+  },
+  {
+    "batch_id": "msgbatch_011EZoGTCPHhCCFhCxmtZWwc",
+    "run_name": "run2",
+    "start_index": 40000,
+    "size": 10000
+  },
+  {
+    "batch_id": "msgbatch_01BWhbZnWkeuiPr1L8ss7NLf",
+    "run_name": "run2",
+    "start_index": 50000,
+    "size": 9231
+  }
+]
