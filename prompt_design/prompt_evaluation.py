@@ -5,10 +5,15 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
 language = "SI" 
 temperature = "redefined_distinction"  # or "redefined_class1" or "0.2" or "1"
 
-path_to_sampled_labels = f"Data/Sample150_{language}.csv"
+path_to_sampled_labels = BASE_DIR / "Data" / f"Sample150_{language}.csv"
 
 # --- Load Sample150_{language}.csv ---
 sample = pd.read_csv(path_to_sampled_labels)
@@ -18,7 +23,7 @@ print(f"Columns: {sample.columns.tolist()}")
 print()
 
 # --- Load {language}_prompt_{temperature}.csv ---
-prompt_results = pd.read_csv(f"{language}_prompt_{temperature}.csv")
+prompt_results = pd.read_csv(BASE_DIR / "Data" / f"{language}_prompt_{temperature}.csv")
 print(f"{language}_prompt_{temperature}.csv structure:")
 print(prompt_results.head())
 print(f"Columns: {prompt_results.columns.tolist()}")

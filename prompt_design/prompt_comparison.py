@@ -13,13 +13,9 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
 
-try:
-	import krippendorff as krippendorff_lib
-except ImportError:  # pragma: no cover - optional dependency fallback
-	krippendorff_lib = None
+import krippendorff
 
-
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 LANGUAGE_CONFIG = {
 	"EN": {
@@ -65,71 +61,18 @@ def to_numeric_series(values: pd.Series) -> np.ndarray:
 	return pd.to_numeric(values, errors="coerce").to_numpy(dtype=float)
 
 
-def ordinal_distance(left: int, right: int, counts: pd.Series) -> float:
-	if left == right:
-		return 0.0
-	low = min(left, right)
-	high = max(left, right)
-	between = counts.loc[(counts.index >= low) & (counts.index < high)].sum()
-	total = float(counts.sum())
-	if total == 0:
-		return 0.0
-	distance = (between / total) ** 2
-	return float(distance)
+def krippendorff_ordinal_alpha(columns):
+    data = np.array(list(columns), dtype=float)
 
+    if data.ndim != 2 or data.shape[0] < 2:
+        return float("nan")
 
-def fallback_krippendorff_ordinal_alpha(data: np.ndarray) -> float:
-	if data.size == 0 or data.ndim != 2 or data.shape[0] < 2:
-		return float("nan")
-
-	valid_values = data[~np.isnan(data)]
-	if valid_values.size < 2:
-		return float("nan")
-
-	categories = sorted({int(value) for value in valid_values})
-	counts = pd.Series(valid_values.astype(int)).value_counts().reindex(categories, fill_value=0).sort_index()
-
-	observed_numerator = 0.0
-	observed_denominator = 0
-	for item_index in range(data.shape[1]):
-		item_labels = [int(value) for value in data[:, item_index] if not np.isnan(value)]
-		if len(item_labels) < 2:
-			continue
-		for left_index, left in enumerate(item_labels[:-1]):
-			for right in item_labels[left_index + 1:]:
-				observed_numerator += ordinal_distance(left, right, counts)
-				observed_denominator += 1
-
-	if observed_denominator == 0:
-		return float("nan")
-
-	expected_numerator = 0.0
-	expected_denominator = 0
-	for left in categories:
-		for right in categories:
-			if left >= right:
-				continue
-			pair_count = int(counts.loc[left]) * int(counts.loc[right])
-			expected_numerator += pair_count * ordinal_distance(left, right, counts)
-			expected_denominator += pair_count
-
-	if expected_denominator == 0:
-		return 1.0
-
-	observed = observed_numerator / observed_denominator
-	expected = expected_numerator / expected_denominator
-	if expected == 0:
-		return 1.0
-	return 1.0 - (observed / expected)
-
-
-def krippendorff_ordinal_alpha(columns: Iterable[np.ndarray]) -> float:
-	data = np.array(list(columns), dtype=float)
-	if data.ndim != 2 or data.shape[0] < 2:
-		return float("nan")
-	if krippendorff_lib is not None:
-		return float(krippendorff_lib.alpha(data, level_of_measurement="ordinal"))
-	return fallback_krippendorff_ordinal_alpha(data)
+    return float(
+        krippendorff.alpha(
+            reliability_data=data,
+            level_of_measurement="ordinal",
+        )
+    )
 
 
 def align_frames(left: pd.DataFrame, right: pd.DataFrame) -> pd.DataFrame:

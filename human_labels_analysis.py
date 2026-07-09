@@ -3,6 +3,8 @@ import re
 
 import pandas as pd
 
+import krippendorff
+import numpy as np
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "Data"
@@ -76,73 +78,24 @@ def load_repeated_annotations(input_path: Path, text_column: str, type_column: s
 	return annotations
 
 
-def ordinal_distance_matrix(counts: pd.Series) -> dict[tuple[int, int], float]:
-	"""Build Krippendorff's ordinal distance matrix from category frequencies.
-
-	The distances are based on the cumulative share of labels between two
-	categories. If you prefer equally spaced categories, replace this with a
-	plain squared index distance.
-	"""
-	total = int(counts.sum())
-	distances: dict[tuple[int, int], float] = {}
-	for left in range(4):
-		for right in range(4):
-			if left == right:
-				distances[(left, right)] = 0.0
-			elif left < right:
-				between = int(counts.loc[left:right - 1].sum())
-				distance = (between / total) ** 2 if total else 0.0
-				distances[(left, right)] = distance
-				distances[(right, left)] = distance
-	return distances
-
-
 def krippendorff_ordinal_alpha(annotations: list[list[int]]) -> float:
-	"""Compute Krippendorff's ordinal alpha for 4 ordered categories.
+    if not annotations:
+        return float("nan")
 
-	The input is a list of repeated-comment units, where each unit contains the
-	observed type ids for that unique text.
-	"""
-	if not annotations:
-		return float("nan")
+    max_raters = max(len(unit) for unit in annotations)
 
-	all_values = [value for unit in annotations for value in unit]
-	counts = pd.Series(all_values).value_counts().reindex(range(4), fill_value=0).sort_index()
-	if counts.sum() < 2:
-		return float("nan")
+    data = np.full((max_raters, len(annotations)), np.nan)
 
-	distances = ordinal_distance_matrix(counts)
+    for col, unit in enumerate(annotations):
+        for row, label in enumerate(unit):
+            data[row, col] = label
 
-	observed_numerator = 0.0
-	observed_denominator = 0
-	for unit in annotations:
-		if len(unit) < 2:
-			continue
-		for index, left in enumerate(unit[:-1]):
-			for right in unit[index + 1:]:
-				observed_numerator += distances[(left, right)]
-				observed_denominator += 1
-
-	if observed_denominator == 0:
-		return float("nan")
-
-	expected_numerator = 0.0
-	expected_denominator = 0
-	for left in range(4):
-		for right in range(left + 1, 4):
-			pair_count = int(counts.loc[left]) * int(counts.loc[right])
-			expected_numerator += pair_count * distances[(left, right)]
-			expected_denominator += pair_count
-
-	if expected_denominator == 0:
-		return 1.0
-
-	do = observed_numerator / observed_denominator
-	de = expected_numerator / expected_denominator
-	if de == 0:
-		return 1.0
-	return 1.0 - (do / de)
-
+    return float(
+        krippendorff.alpha(
+            reliability_data=data,
+            level_of_measurement="ordinal",
+        )
+    )
 
 def print_distribution(name: str, input_path: Path, type_column: str) -> None:
 	"""Print the total number of comments and the share per type for one file."""
