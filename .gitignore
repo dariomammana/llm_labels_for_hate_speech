@@ -1,3 +1,5 @@
 *.csv
+*.CSV
 *.env
 *.xlsx
+*.zip
