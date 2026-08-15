@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import ssl
 import sys
 import tempfile
 from pathlib import Path
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
+
+try:
+    import certifi
+except ModuleNotFoundError:  # pragma: no cover - fallback for minimal environments
+    certifi = None
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -49,6 +55,17 @@ DOWNLOAD_SPECS = [
 ]
 
 
+def get_ssl_context() -> ssl.SSLContext:
+    """Create an SSL context that works even when the local Windows trust store is incomplete."""
+    if certifi is not None:
+        return ssl.create_default_context(cafile=certifi.where())
+
+    try:
+        return ssl.create_default_context()
+    except Exception:
+        return ssl._create_unverified_context()
+
+
 def download_file(url: str, destination: Path, force: bool = False) -> str:
     destination.parent.mkdir(parents=True, exist_ok=True)
 
@@ -59,8 +76,17 @@ def download_file(url: str, destination: Path, force: bool = False) -> str:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as tmp_file:
         tmp_path = Path(tmp_file.name)
 
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+            "Accept": "*/*",
+        },
+    )
+
     try:
-        with urlopen(url) as response, tmp_path.open("wb") as out_file:
+        with urlopen(request, timeout=60, context=get_ssl_context()) as response, tmp_path.open("wb") as out_file:
             shutil.copyfileobj(response, out_file)
         shutil.move(str(tmp_path), str(destination))
     except URLError as error:

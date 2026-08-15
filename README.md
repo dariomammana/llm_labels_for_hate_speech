@@ -6,7 +6,7 @@ This repository contains scripts and notebooks for:
 - training/evaluating models,
 - comparing agreement and performance metrics.
 
-The repository is configured so CSV data files are not committed to GitHub.
+The repository intentionally does not include raw CSV datasets. All data files are expected to be present locally on the machine running the project.
 
 ## 1. Environment setup
 
@@ -25,46 +25,34 @@ If you run scripts in the annotation folder that call Anthropic, set your API ke
 $env:ANTHROPIC_API_KEY="your_key_here"
 ```
 
-## 2. Download source datasets from CLARIN
+## 2. Local data expectations
 
-Run:
+This repository assumes the project data is available locally outside GitHub, under folders such as:
 
-```powershell
-python download_clarin_data.py
-```
+- Data/
+- Data/Test_data/
 
-This downloads the required files from these handles:
-- https://www.clarin.si/repository/xmlui/handle/11356/1454 (EN)
-- https://www.clarin.si/repository/xmlui/handle/11356/1450 (IT)
-- https://www.clarin.si/repository/xmlui/handle/11356/1398 (SI)
+The scripts are written to work with local CSV files already present on disk. The repository does not include a data download step and does not track dataset files in Git.
 
-It writes the files to paths expected by the existing scripts, including SI filename normalization:
+If you want to obtain the source datasets yourself, use the original CLARIN.SI resources here:
+
+- English: https://www.clarin.si/repository/xmlui/handle/11356/1454
+- Italian: https://www.clarin.si/repository/xmlui/handle/11356/1450
+- Slovenian: https://www.clarin.si/repository/xmlui/handle/11356/1398
+
+The expected local files are:
+- Data/IMSyPP_EN_YouTube_comments_train.csv
+- Data/IMSyPP_IT_YouTube_comments_train.csv
 - Data/IMSyPP_SI_anotacije_round1(in).csv
+- Data/Test_data/IMSyPP_EN_YouTube_comments_evaluation_no_context.csv
+- Data/Test_data/IMSyPP_IT_YouTube_comments_evaluation.csv
 - Data/Test_data/IMSyPP_SI_anotacije_round2.csv
 
-To force re-download:
+If you have the source data locally, make sure the expected files are available before running the project scripts.
 
-```powershell
-python download_clarin_data.py --force
-```
+## 3. Main workflows
 
-## 3. Build derived datasets used by this project
-
-```powershell
-python human_labels_import.py
-python unique_add_index.py
-python test_set_cleanup.py
-```
-
-These commands generate files like:
-- Data/Unique_EN.csv, Data/Unique_IT.csv, Data/Unique_SI.csv
-- Data/Sample150_EN.csv, Data/Sample150_IT.csv, Data/Sample150_SI.csv
-- Data/EN_human_annotations.csv, Data/IT_human_annotations.csv, Data/SI_human_annotations.csv
-- Data/Test_data/*_mapped.csv
-
-## 4. Main workflows
-
-### 4.1 Annotation batch pipeline
+### 3.1 Annotation batch pipeline
 
 From the annotation directory, per language:
 
@@ -73,14 +61,14 @@ python submit_batches_EN.py
 python retrieve_results_EN.py
 ```
 
-Equivalent scripts exist for IT and SI, plus retry/retrieve retry scripts for SI.
+Equivalent scripts exist for IT and SI, plus retry/retrieve scripts for SI.
 
-### 4.2 Prompt-design experiments
+### 3.2 Prompt-design experiments
 
 Run scripts in prompt_design/EN, prompt_design/IT, prompt_design/SI.
 Each script writes CSV outputs in its local folder.
 
-### 4.3 Analysis and comparison
+### 3.3 Analysis and comparison
 
 Key scripts:
 - prompt_design/prompt_comparison.py
@@ -88,7 +76,7 @@ Key scripts:
 - sample_analysis.py
 - label_share_summary.py
 
-### 4.4 Model training/evaluation notebooks
+### 3.4 Model training/evaluation notebooks
 
 Use:
 - finetune_xlmr_human.ipynb
@@ -96,7 +84,7 @@ Use:
 - evaluate_models.ipynb
 - evaluate_models_bootstrap_holm.ipynb
 
-## 5. Public GitHub safety (no CSV committed)
+## 4. Public GitHub safety (no CSV committed)
 
 The repository .gitignore excludes CSV files globally.
 
@@ -119,8 +107,8 @@ To inspect ignored CSV files:
 git status --ignored
 ```
 
-## 6. Notes
+## 5. Notes
 
 - This repo expects local data files under Data/ and Data/Test_data/.
 - Some notebooks use Google Drive paths; adjust paths for local-only execution.
-- Respect CLARIN dataset licenses and citation requirements when publishing results.
+- Respect dataset licenses and citation requirements when publishing results.
